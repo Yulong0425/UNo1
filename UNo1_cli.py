@@ -50,7 +50,7 @@ class UNo1_cli():
             thread = self.download_queue.pop(0)
             self.download_thread(thread['thread_id'], args)
 
-    def mark_user(self, user_id, username=None):
+    def mark_user(self, user_id, post_payload=None):
         # Read Badges by user_id and then join to forums
         badges = self.db.read(table_name="badges", user_id=user_id)
         red_district_names = ["有男偷玩", "异色格", "新男权", "二游笑话", "快乐雪花", "北落野", "原神滑坡"]
@@ -66,9 +66,9 @@ class UNo1_cli():
             if forum_id in rds.keys():
                 red_district_components.append({"forum_name": rds[forum_id], "badge_lv": badge['badge_lv']})
         
-        if username is not None:
+        if post_payload is not None:
             if len(red_district_components) > 0:
-                print(f"用户{user_id}({username})被标记为: ", end="")
+                print(f"第{post_payload['layer']}楼用户{user_id}({post_payload['username']})被标记为: ", end="")
                 for idx, badge in enumerate(red_district_components):
                     if badge['badge_lv'] > 1:
                         print(f"{badge['forum_name']}成分({badge['badge_lv']}级) ", end="")
@@ -96,14 +96,15 @@ class UNo1_cli():
 
         # 获取回帖
         pn = 1
-        print(thread_id)
-        last_layer = self.db.read(table_name="posts", thread_id=int(thread_id))["layer"].max()
+        if not args.clean:
+            print(thread_id)
+            last_layer = self.db.read(table_name="posts", thread_id=int(thread_id))["layer"].max()
 
-        if pd.notna(last_layer):
-            pn = last_layer//15
-            print("最后更新于第 " + str(pn) + " 页")
-        else:
-            print("没有回帖")
+            if pd.notna(last_layer):
+                pn = last_layer//15
+                print("最后更新于第 " + str(pn) + " 页")
+            else:
+                print("没有回帖")
 
         while True:
             tb_aux.random_sleep(self.min_wait_time, self.max_wait_time)
@@ -114,8 +115,9 @@ class UNo1_cli():
             post_list = post_data[2]
             
             if marking_user:
-                for user in user_list:
-                    self.mark_user(user['user_id'], user['username'])
+                for user, post in zip(user_list, post_list):
+                    payload = {'username': user['username'], 'layer': post['layer']}
+                    self.mark_user(user['user_id'], payload)
 
             max_page = post_data[6]
             self.download_progress = pn/max_page
@@ -159,7 +161,8 @@ class UNo1_cli():
                     
                     if marking_user:
                         for user in reply_user_list:
-                            self.mark_user(user['user_id'], user['username'])
+                            payload = {'username': user['username'], 'layer': -1}
+                            self.mark_user(user['user_id'], payload)
 
                     self.db.create(table_name="users", records=reply_user_list)
                     self.db.create(table_name="replies", records=reply_list)
@@ -201,6 +204,7 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--user", action="store_true", help="下载时显示用户信息")
     parser.add_argument("-k", "--kit", action="store_true", help="信息源是否切换为不二工具箱")
     parser.add_argument("-m", "--mark", action="store_true", help="是否标记用户？")
+    parser.add_argument("-c", "--clean", action="store_true", help="强制重新下载")
     parser.add_argument("-f", "--forum", help="指定吧名，扫描指定吧", type=str, default=None)
     parser.add_argument("-t", "--thread_id", help="指定贴ID，扫描指定贴", type=int, default=None)
     args = parser.parse_args()

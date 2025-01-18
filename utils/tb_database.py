@@ -28,7 +28,7 @@ class Database:
         
         if not os.path.exists('resources'):
             os.mkdir('resources')
-
+        
     def save_table(self, table_name):
         """保存表数据到对应的 CSV 文件"""
         file_name = f"{table_name}.csv"
@@ -67,9 +67,6 @@ class Database:
 
         # 保存更新后的表到文件
         self.save_table(table_name)
-
-
-
 
     def read(self, table_name, **conditions):
         """读取表中的数据，支持按条件筛选"""

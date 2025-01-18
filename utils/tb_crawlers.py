@@ -228,7 +228,8 @@ class PostDataCrawler(Crawler):
                 'content':content.get('content', None)  # 帖子内容
             }
             
-            resource = etree.HTML(str(data.get('content', {}))).xpath('//img[@class="BDE_Image"]/@src')
+            uncleaned_data = json.loads(posts_data_converted)
+            resource = etree.HTML(str(uncleaned_data.get('content', {}))).xpath('//img[@class="BDE_Image"]/@src')
             # 添加
             self.post_list.append(post)
             self.user_list.append(user)
